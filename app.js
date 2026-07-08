@@ -5,148 +5,11 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ---- 1. MARQUEE PAUSE/PLAY (WCAG 2.2.2) ----
-  const marqueeTrack = document.querySelector('.marquee-track');
-  const pauseBtn = document.querySelector('.marquee-pause');
-
-  if (pauseBtn && marqueeTrack) {
-    let isPaused = false;
-    pauseBtn.addEventListener('click', () => {
-      isPaused = !isPaused;
-      marqueeTrack.style.animationPlayState = isPaused ? 'paused' : 'running';
-      pauseBtn.setAttribute('aria-pressed', isPaused.toString());
-      pauseBtn.setAttribute('aria-label', isPaused ? 'Play scrolling banner' : 'Pause scrolling banner');
-      pauseBtn.querySelector('span').textContent = isPaused ? '▶' : '⏸';
-    });
-
-    // Also pause on hover (bonus UX)
-    const strip = document.querySelector('.marquee-strip');
-    strip.addEventListener('mouseenter', () => {
-      if (!isPaused) marqueeTrack.style.animationPlayState = 'paused';
-    });
-    strip.addEventListener('mouseleave', () => {
-      if (!isPaused) marqueeTrack.style.animationPlayState = 'running';
-    });
-  }
+  // ---- 1. (removed — values strip is now static, no pause/play needed) ----
 
 
-  // ---- 2. DRAGGABLE POLAROIDS (with keyboard support) ----
+  // ---- 2. THE ROOM PHOTOS ARE STATIC (no drag) ----
   const polaroids = document.querySelectorAll('.polaroid');
-
-  polaroids.forEach(polaroid => {
-    let isDragging = false;
-    let startX, startY, origX, origY;
-
-    const computedStyle = window.getComputedStyle(polaroid);
-    const matrix = new DOMMatrix(computedStyle.transform);
-    const angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
-
-    // Mouse drag
-    polaroid.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      const rect = polaroid.getBoundingClientRect();
-      const parent = polaroid.parentElement.getBoundingClientRect();
-      origX = rect.left - parent.left;
-      origY = rect.top - parent.top;
-      polaroid.style.position = 'absolute';
-      polaroid.style.left = origX + 'px';
-      polaroid.style.top = origY + 'px';
-      polaroid.style.zIndex = 100;
-      polaroid.style.cursor = 'grabbing';
-      polaroid.style.transform = `rotate(${angle}deg)`;
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      polaroid.style.left = (origX + e.clientX - startX) + 'px';
-      polaroid.style.top = (origY + e.clientY - startY) + 'px';
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      polaroid.style.cursor = 'grab';
-      polaroid.style.zIndex = '';
-    });
-
-    // Keyboard drag (WCAG 2.1.1 — keyboard accessible)
-    polaroid.addEventListener('keydown', (e) => {
-      const STEP = 20;
-      const currentLeft = parseInt(polaroid.style.left) || 0;
-      const currentTop = parseInt(polaroid.style.top) || 0;
-
-      if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-      e.preventDefault();
-
-      if (polaroid.style.position !== 'absolute') {
-        const rect = polaroid.getBoundingClientRect();
-        const parent = polaroid.parentElement.getBoundingClientRect();
-        polaroid.style.position = 'absolute';
-        polaroid.style.left = (rect.left - parent.left) + 'px';
-        polaroid.style.top = (rect.top - parent.top) + 'px';
-        polaroid.style.transform = `rotate(${angle}deg)`;
-      }
-
-      const moves = {
-        ArrowUp:    [0, -STEP],
-        ArrowDown:  [0, STEP],
-        ArrowLeft:  [-STEP, 0],
-        ArrowRight: [STEP, 0],
-      };
-      const [dx, dy] = moves[e.key];
-      polaroid.style.left = (currentLeft + dx) + 'px';
-      polaroid.style.top  = (currentTop + dy) + 'px';
-      polaroid.style.zIndex = 100;
-
-      // Announce movement to screen readers
-      polaroid.setAttribute('aria-label',
-        polaroid.getAttribute('aria-label').replace(/ \(moved\)$/, '') + ' (moved)'
-      );
-    });
-
-    // Touch drag
-    polaroid.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      isDragging = true;
-      startX = touch.clientX;
-      startY = touch.clientY;
-      const rect = polaroid.getBoundingClientRect();
-      const parent = polaroid.parentElement.getBoundingClientRect();
-      origX = rect.left - parent.left;
-      origY = rect.top - parent.top;
-      polaroid.style.position = 'absolute';
-      polaroid.style.left = origX + 'px';
-      polaroid.style.top = origY + 'px';
-      polaroid.style.zIndex = 100;
-      polaroid.style.transform = `rotate(${angle}deg)`;
-    }, { passive: true });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      const touch = e.touches[0];
-      polaroid.style.left = (origX + touch.clientX - startX) + 'px';
-      polaroid.style.top  = (origY + touch.clientY - startY) + 'px';
-    }, { passive: true });
-
-    document.addEventListener('touchend', () => {
-      isDragging = false;
-      polaroid.style.zIndex = '';
-    });
-  });
-
-
-  // ---- 3. BRING POLAROID FORWARD ON CLICK/FOCUS ----
-  polaroids.forEach(p => {
-    const bringForward = () => {
-      polaroids.forEach(other => { if (other !== p) other.style.zIndex = ''; });
-      p.style.zIndex = 50;
-    };
-    p.addEventListener('click', bringForward);
-    p.addEventListener('focus', bringForward);
-  });
 
 
   // ---- 4. SCROLL REVEAL ----
@@ -209,33 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // ---- 7. POLAROID HOVER WOBBLE (respects reduced motion) ----
-  if (!prefersReducedMotion) {
-    const classRotations = {
-      p1: 'rotate(-4deg) translateY(10px)',
-      p2: 'rotate(3deg) translateY(-15px)',
-      p3: 'rotate(-2deg) translateY(20px)',
-      p4: 'rotate(5deg) translateY(-8px)',
-      p5: 'rotate(-6deg) translateY(5px)',
-      p6: 'rotate(2deg) translateY(12px)',
-    };
-
-    polaroids.forEach(p => {
-      p.addEventListener('mouseenter', () => {
-        const wobble = (Math.random() * 6 - 3).toFixed(1);
-        p.style.transform = `rotate(${wobble}deg) scale(1.04)`;
-        p.style.zIndex = 20;
-      });
-      p.addEventListener('mouseleave', () => {
-        p.style.zIndex = '';
-        if (p.style.position !== 'absolute') {
-          for (const [cls, rot] of Object.entries(classRotations)) {
-            if (p.classList.contains(cls)) p.style.transform = rot;
-          }
-        }
-      });
-    });
-  }
+  // ---- 7. (removed — photos are static, no hover wobble) ----
 
   console.log('%c AURA HOUSE', 'font-size:2rem; font-family:serif; color:#d4a017; background:#0a0a0a; padding:10px 20px;');
   console.log('%c put the phone down.', 'font-size:1rem; color:#f0e8d0; background:#0a0a0a; padding:4px 20px;');
